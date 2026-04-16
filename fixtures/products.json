@@ -1,0 +1,12 @@
+[
+  {"id": "p001", "name": "Sony WH-1000XM5 Wireless Noise Canceling Headphones", "raw_brand": "SONY", "description": "Industry-leading noise cancellation with 30-hour battery life.", "price_usd": 399.99},
+  {"id": "p002", "name": "Nike Air Zoom Pegasus 40 Men's Running Shoe", "raw_brand": "nike", "description": "Responsive cushioning for daily road running.", "price_usd": 139.00},
+  {"id": "p003", "name": "Instant Pot Duo 7-in-1 Electric Pressure Cooker, 6 Qt", "raw_brand": "Instant Pot", "description": "Pressure cook, slow cook, rice cooker, steamer, saute, yogurt, warmer.", "price_usd": 99.95},
+  {"id": "p004", "name": "CeraVe Moisturizing Cream for Normal to Dry Skin 19oz", "raw_brand": null, "description": "Developed with dermatologists, with hyaluronic acid and ceramides.", "price_usd": 18.99},
+  {"id": "p005", "name": "Organic Honeycrisp Apples, 3 lb Bag", "raw_brand": null, "description": "Crisp, sweet, organic apples sourced from Washington orchards.", "price_usd": 6.49},
+  {"id": "p006", "name": "Wilson NBA Authentic Series Outdoor Basketball", "raw_brand": "Wilson", "description": "Official NBA outdoor composite basketball, size 7.", "price_usd": 29.99},
+  {"id": "p007", "name": "LEGO Classic Large Creative Brick Box 10698", "raw_brand": "LEGO", "description": "790 colorful bricks to inspire open-ended creative play.", "price_usd": 59.99},
+  {"id": "p008", "name": "Samsung 65-inch Q80C QLED 4K Smart TV", "raw_brand": "SAMSUNG", "description": "Direct Full Array backlight with Quantum HDR+.", "price_usd": 1099.00},
+  {"id": "p009", "name": "Patagonia Better Sweater Fleece Jacket - Men's", "raw_brand": "Patagonia", "description": "100% polyester fleece, Fair Trade Certified sewn.", "price_usd": 159.00},
+  {"id": "p010", "name": "The Ordinary Niacinamide 10% + Zinc 1% Serum 30ml", "raw_brand": "the ordinary", "description": "High-strength vitamin and mineral blemish formula.", "price_usd": 6.70}
+]
