@@ -1,14 +1,19 @@
 """Load step — write enriched rows to a target store.
 
-The template ships with a SQLite loader. Implement the same two methods
-(open / upsert) to swap in MySQL, Postgres, BigQuery, or S3 Parquet.
+The template ships with two loaders:
+- ``SqliteLoader`` — embedded SQL, good for local runs and testing.
+- ``JsonlLoader`` — newline-delimited JSON, zero dependencies; useful for
+  dry-run inspection, piping to jq, or staging files for BigQuery / S3.
+
+Implement the three-method ``Loader`` protocol to add MySQL, Postgres, or
+Parquet without touching the orchestrator.
 """
 
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Protocol
+from typing import IO, Protocol
 
 from .models import ProductEnriched
 
@@ -70,3 +75,32 @@ class SqliteLoader:
         if self._conn is not None:
             self._conn.close()
             self._conn = None
+
+
+class JsonlLoader:
+    """Write enriched products as newline-delimited JSON (JSONL).
+
+    ``mode="a"`` (default) appends to an existing file so incremental runs
+    accumulate rows safely.  Use ``mode="w"`` to truncate on open.
+    Each ``upsert`` call flushes immediately, so the file is readable while
+    the pipeline is still running.
+    """
+
+    def __init__(self, path: str | Path, *, mode: str = "a") -> None:
+        self.path = Path(path)
+        self._mode = mode
+        self._fh: IO[str] | None = None
+
+    def open(self) -> None:
+        self._fh = self.path.open(self._mode, encoding="utf-8")
+
+    def upsert(self, row: ProductEnriched) -> None:
+        """Append one JSON line; flush so readers see it immediately."""
+        assert self._fh is not None, "call open() first"
+        self._fh.write(row.model_dump_json() + "\n")
+        self._fh.flush()
+
+    def close(self) -> None:
+        if self._fh is not None:
+            self._fh.close()
+            self._fh = None
