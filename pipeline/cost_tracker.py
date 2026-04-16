@@ -21,9 +21,17 @@ class BudgetExhausted(RuntimeError):
 # USD per 1M tokens. Approximate — update to match your account pricing.
 PRICE_PER_1M_TOKENS: dict[str, tuple[float, float]] = {
     # model: (input, output)
+    # OpenAI
     "gpt-4o-mini": (0.15, 0.60),
     "gpt-4o": (2.50, 10.00),
     "gpt-4.1-mini": (0.40, 1.60),
+    # Anthropic
+    "claude-3-5-haiku": (0.80, 4.00),
+    "claude-3-5-sonnet": (3.00, 15.00),
+    "claude-3-opus": (15.00, 75.00),
+    # Google
+    "gemini-1.5-flash": (0.075, 0.30),
+    "gemini-1.5-pro": (1.25, 5.00),
 }
 
 
