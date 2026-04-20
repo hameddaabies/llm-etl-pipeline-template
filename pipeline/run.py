@@ -6,12 +6,12 @@ Run with:  python -m pipeline.run
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
+from .config import PipelineConfig
 from .cost_tracker import BudgetExhausted, CostTracker
 from .extract import extract_from_fixture
 from .load import SqliteLoader
@@ -26,14 +26,13 @@ def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s | %(message)s",
     )
     load_dotenv()
+    cfg = PipelineConfig()
 
     fixture = Path(__file__).resolve().parent.parent / "fixtures" / "products.json"
-    db_path = os.getenv("PIPELINE_DB_PATH", "pipeline.db")
-    max_usd = float(os.getenv("PIPELINE_MAX_USD", "1.00"))
 
-    tracker = CostTracker(max_usd=max_usd)
-    transformer = Transformer(cost_tracker=tracker)
-    loader = SqliteLoader(db_path)
+    tracker = CostTracker(max_usd=cfg.max_usd)
+    transformer = Transformer(model=cfg.openai_model, cost_tracker=tracker)
+    loader = SqliteLoader(cfg.db_path)
     loader.open()
 
     processed = 0
