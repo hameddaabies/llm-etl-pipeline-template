@@ -53,9 +53,12 @@ class Transformer:
             f"description: {raw.description or '(none)'}\n"
             f"price_usd: {raw.price_usd if raw.price_usd is not None else '(none)'}"
         )
+        # temperature=0: same product must always enrich to the same canonical
+        # form so downstream dedup and audit trails stay consistent.
         response = self.client.beta.chat.completions.parse(
             model=self.model,
             response_format=ProductEnriched,
+            temperature=0,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_msg},

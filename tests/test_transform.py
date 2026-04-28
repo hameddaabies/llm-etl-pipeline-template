@@ -105,3 +105,14 @@ def test_null_parsed_raises_runtime_error() -> None:
     with patch("time.sleep"):  # suppress tenacity back-off in retry loop
         with pytest.raises(RuntimeError, match="no parsed object"):
             transformer.enrich_one(_raw())
+
+
+# ── determinism ───────────────────────────────────────────────────────────────
+
+
+def test_temperature_zero_is_passed_to_api() -> None:
+    """ETL enrichment must be deterministic — temperature=0 must reach the API."""
+    client = _make_client(_enriched())
+    Transformer(client=client, model="gpt-4o-mini").enrich_one(_raw())
+    _, kwargs = client.beta.chat.completions.parse.call_args
+    assert kwargs.get("temperature") == 0
