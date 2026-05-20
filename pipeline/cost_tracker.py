@@ -41,10 +41,25 @@ class CostTracker:
     spent_usd: float = 0.0
     calls: int = 0
     _per_model_tokens: dict[str, tuple[int, int]] = field(default_factory=dict)
+    _custom_prices: dict[str, tuple[float, float]] = field(default_factory=dict)
+
+    def register_model_price(
+        self, model: str, *, input_usd_per_1m: float, output_usd_per_1m: float
+    ) -> None:
+        """Register pricing for a model not in the built-in table.
+
+        Useful for fine-tuned deployments, private endpoints, or models that
+        shipped after this template was last updated. Per-instance: does not
+        mutate the module-level ``PRICE_PER_1M_TOKENS``. Takes precedence over
+        the built-in table when both define the same model.
+        """
+        self._custom_prices[model] = (input_usd_per_1m, output_usd_per_1m)
 
     def record(self, *, input_tokens: int, output_tokens: int, model: str) -> float:
         """Add a call's cost to the running total. Returns the USD delta."""
-        in_price, out_price = PRICE_PER_1M_TOKENS.get(model, (0.0, 0.0))
+        in_price, out_price = self._custom_prices.get(
+            model, PRICE_PER_1M_TOKENS.get(model, (0.0, 0.0))
+        )
         delta = (input_tokens * in_price + output_tokens * out_price) / 1_000_000
         self.spent_usd += delta
         self.calls += 1
