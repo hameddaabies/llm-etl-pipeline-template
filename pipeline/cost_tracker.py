@@ -79,3 +79,25 @@ class CostTracker:
         for m, (i, o) in self._per_model_tokens.items():
             lines.append(f"  {m}: in={i} out={o}")
         return "\n".join(lines)
+
+    def breakdown(self) -> dict[str, dict[str, float | int]]:
+        """Per-model token + USD spend, structured for dashboards or JSON dumps.
+
+        Returns a dict keyed by model name with ``input_tokens``, ``output_tokens``,
+        and ``spent_usd`` for each. Unlike :meth:`summary` this is machine-readable
+        and safe to serialize. Models priced at zero (unknown + no registered
+        override) still appear with ``spent_usd == 0.0`` so callers can detect
+        them.
+        """
+        out: dict[str, dict[str, float | int]] = {}
+        for model, (in_tok, out_tok) in self._per_model_tokens.items():
+            in_price, out_price = self._custom_prices.get(
+                model, PRICE_PER_1M_TOKENS.get(model, (0.0, 0.0))
+            )
+            spent = (in_tok * in_price + out_tok * out_price) / 1_000_000
+            out[model] = {
+                "input_tokens": in_tok,
+                "output_tokens": out_tok,
+                "spent_usd": spent,
+            }
+        return out
