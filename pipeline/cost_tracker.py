@@ -55,11 +55,35 @@ class CostTracker:
         """
         self._custom_prices[model] = (input_usd_per_1m, output_usd_per_1m)
 
-    def record(self, *, input_tokens: int, output_tokens: int, model: str) -> float:
-        """Add a call's cost to the running total. Returns the USD delta."""
-        in_price, out_price = self._custom_prices.get(
+    def _price_for(self, model: str) -> tuple[float, float]:
+        """Resolve (input, output) USD-per-1M pricing for a model.
+
+        Registered custom prices win over the built-in table; unknown models
+        resolve to ``(0.0, 0.0)``.
+        """
+        return self._custom_prices.get(
             model, PRICE_PER_1M_TOKENS.get(model, (0.0, 0.0))
         )
+
+    @property
+    def remaining_usd(self) -> float:
+        """USD budget left before the cap, clamped at zero once exhausted."""
+        return max(0.0, self.max_usd - self.spent_usd)
+
+    def estimate(self, *, input_tokens: int, output_tokens: int, model: str) -> float:
+        """Project a call's USD cost without recording it.
+
+        Lets callers pre-flight an expensive request against the remaining
+        budget before spending — e.g. ``if tracker.estimate(...) >
+        tracker.remaining_usd: skip``. Pricing resolves identically to
+        :meth:`record`.
+        """
+        in_price, out_price = self._price_for(model)
+        return (input_tokens * in_price + output_tokens * out_price) / 1_000_000
+
+    def record(self, *, input_tokens: int, output_tokens: int, model: str) -> float:
+        """Add a call's cost to the running total. Returns the USD delta."""
+        in_price, out_price = self._price_for(model)
         delta = (input_tokens * in_price + output_tokens * out_price) / 1_000_000
         self.spent_usd += delta
         self.calls += 1
@@ -91,9 +115,7 @@ class CostTracker:
         """
         out: dict[str, dict[str, float | int]] = {}
         for model, (in_tok, out_tok) in self._per_model_tokens.items():
-            in_price, out_price = self._custom_prices.get(
-                model, PRICE_PER_1M_TOKENS.get(model, (0.0, 0.0))
-            )
+            in_price, out_price = self._price_for(model)
             spent = (in_tok * in_price + out_tok * out_price) / 1_000_000
             out[model] = {
                 "input_tokens": in_tok,

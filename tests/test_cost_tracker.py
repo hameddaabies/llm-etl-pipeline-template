@@ -62,6 +62,47 @@ def test_register_model_price_overrides_builtin():
     assert delta == pytest.approx(1.00)
 
 
+def test_remaining_usd_tracks_spend():
+    t = CostTracker(max_usd=1.00)
+    assert t.remaining_usd == pytest.approx(1.00)
+    t.record(input_tokens=1_000_000, output_tokens=0, model="gpt-4o-mini")
+    # 1M input tokens at 0.15/1M = $0.15 spent.
+    assert t.remaining_usd == pytest.approx(0.85)
+
+
+def test_remaining_usd_clamps_at_zero_after_exhaustion():
+    t = CostTracker(max_usd=0.0001)
+    with pytest.raises(BudgetExhausted):
+        t.record(input_tokens=10_000, output_tokens=5_000, model="gpt-4o-mini")
+    # Overspent past the cap, but the budget left never goes negative.
+    assert t.remaining_usd == 0.0
+
+
+def test_estimate_does_not_record():
+    t = CostTracker(max_usd=1.00)
+    projected = t.estimate(input_tokens=1_000_000, output_tokens=0, model="gpt-4o-mini")
+    assert projected == pytest.approx(0.15)
+    # estimate() is read-only: no spend, no call count, no per-model tally.
+    assert t.spent_usd == 0.0
+    assert t.calls == 0
+    assert t.breakdown() == {}
+
+
+def test_estimate_uses_registered_custom_price():
+    t = CostTracker(max_usd=1.00)
+    t.register_model_price("ft:custom", input_usd_per_1m=2.00, output_usd_per_1m=8.00)
+    projected = t.estimate(input_tokens=1_000_000, output_tokens=500_000, model="ft:custom")
+    assert projected == pytest.approx(2.00 + 4.00)
+
+
+def test_estimate_matches_record_delta():
+    # Pre-flight estimate must equal what record() actually charges.
+    t = CostTracker(max_usd=10.00)
+    projected = t.estimate(input_tokens=1234, output_tokens=567, model="claude-3-5-haiku")
+    delta = t.record(input_tokens=1234, output_tokens=567, model="claude-3-5-haiku")
+    assert projected == pytest.approx(delta)
+
+
 def test_breakdown_returns_per_model_spend():
     t = CostTracker(max_usd=10.00)
     t.record(input_tokens=1000, output_tokens=200, model="gpt-4o-mini")
