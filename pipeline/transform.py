@@ -11,12 +11,12 @@ import os
 from openai import OpenAI
 from tenacity import (
     retry,
-    retry_if_exception_type,
+    retry_if_not_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
 
-from .cost_tracker import CostTracker
+from .cost_tracker import BudgetExhausted, CostTracker
 from .models import ProductEnriched, RawProduct
 
 SYSTEM_PROMPT = (
@@ -39,11 +39,14 @@ class Transformer:
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         self.cost_tracker = cost_tracker
 
+    # Retry transient failures (network, rate limits, malformed parses) but
+    # never BudgetExhausted: a tripped cost cap means stop spending, so retrying
+    # it would fire two more paid LLM calls and defeat the budget gate.
     @retry(
         reraise=True,
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type(Exception),
+        retry=retry_if_not_exception_type(BudgetExhausted),
     )
     def enrich_one(self, raw: RawProduct) -> ProductEnriched:
         user_msg = (

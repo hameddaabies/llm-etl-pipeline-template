@@ -96,6 +96,24 @@ def test_max_usd_zero_raises_budget_exhausted() -> None:
             transformer.enrich_one(_raw())
 
 
+def test_budget_exhausted_does_not_retry() -> None:
+    """A tripped budget cap must halt immediately, not fire more paid calls.
+
+    BudgetExhausted is a RuntimeError, so a blanket retry-on-Exception would
+    re-invoke the LLM up to stop_after_attempt times — burning the exact
+    spend the cap is meant to prevent. The retry predicate must exclude it.
+    """
+    tracker = CostTracker(max_usd=0.0)
+    client = _make_client(_enriched())
+    transformer = Transformer(
+        client=client, model="gpt-4o-mini", cost_tracker=tracker
+    )
+    with patch("time.sleep"):  # would expose back-off if a retry slipped through
+        with pytest.raises(BudgetExhausted):
+            transformer.enrich_one(_raw())
+    assert client.beta.chat.completions.parse.call_count == 1
+
+
 # ── error handling ────────────────────────────────────────────────────────────
 
 
