@@ -125,6 +125,27 @@ def test_null_parsed_raises_runtime_error() -> None:
             transformer.enrich_one(_raw())
 
 
+def test_transient_error_is_retried_then_succeeds() -> None:
+    """A transient API failure must be retried, not surfaced on first hit.
+
+    The retry predicate excludes only BudgetExhausted, so a network blip
+    should trigger re-invocation up to stop_after_attempt. Here the first two
+    attempts raise and the third succeeds, so the parsed product is returned.
+    """
+    good = _make_client(_enriched()).beta.chat.completions.parse.return_value
+    client = MagicMock()
+    client.beta.chat.completions.parse.side_effect = [
+        ConnectionError("transient blip"),
+        ConnectionError("transient blip"),
+        good,
+    ]
+    transformer = Transformer(client=client, model="gpt-4o-mini")
+    with patch("time.sleep"):  # suppress tenacity back-off between attempts
+        result = transformer.enrich_one(_raw(price=None))
+    assert result.brand == "Sony"
+    assert client.beta.chat.completions.parse.call_count == 3
+
+
 # ── determinism ───────────────────────────────────────────────────────────────
 
 
