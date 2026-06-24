@@ -6,13 +6,16 @@ The template ships with two loaders:
   dry-run inspection, piping to jq, or staging files for BigQuery / S3.
 
 Implement the three-method ``Loader`` protocol to add MySQL, Postgres, or
-Parquet without touching the orchestrator.
+Parquet without touching the orchestrator. Both shipped loaders are also
+context managers — ``with SqliteLoader(path) as loader: ...`` opens on entry
+and closes on exit even if the load body raises.
 """
 
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from types import TracebackType
 from typing import IO, Protocol
 
 from .models import ProductEnriched
@@ -24,7 +27,32 @@ class Loader(Protocol):
     def close(self) -> None: ...
 
 
-class SqliteLoader:
+class _ManagedLoader:
+    """Mixin giving a loader ``with`` support over its open()/close() pair.
+
+    Entering the block calls ``open()`` and yields the loader; leaving it
+    always calls ``close()`` — even if the body raises — so a connection or
+    file handle is never leaked on an error mid-load. ``open``/``close`` come
+    from the concrete loader subclass.
+    """
+
+    def open(self) -> None: ...  # pragma: no cover - provided by subclass
+    def close(self) -> None: ...  # pragma: no cover - provided by subclass
+
+    def __enter__(self) -> "_ManagedLoader":
+        self.open()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.close()
+
+
+class SqliteLoader(_ManagedLoader):
     DDL = """
     CREATE TABLE IF NOT EXISTS products (
         id         TEXT PRIMARY KEY,
@@ -77,7 +105,7 @@ class SqliteLoader:
             self._conn = None
 
 
-class JsonlLoader:
+class JsonlLoader(_ManagedLoader):
     """Write enriched products as newline-delimited JSON (JSONL).
 
     ``mode="a"`` (default) appends to an existing file so incremental runs

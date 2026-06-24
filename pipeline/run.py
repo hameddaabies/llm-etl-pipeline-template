@@ -32,11 +32,8 @@ def main() -> int:
 
     tracker = CostTracker(max_usd=cfg.max_usd)
     transformer = Transformer(model=cfg.openai_model, cost_tracker=tracker)
-    loader = SqliteLoader(cfg.db_path)
-    loader.open()
-
     processed = 0
-    try:
+    with SqliteLoader(cfg.db_path) as loader:
         for raw in extract_from_fixture(fixture):
             try:
                 enriched = transformer.enrich_one(raw)
@@ -46,8 +43,6 @@ def main() -> int:
             loader.upsert(enriched)
             processed += 1
             LOG.info("loaded id=%s brand=%s category=%s", enriched.id, enriched.brand, enriched.category)
-    finally:
-        loader.close()
 
     LOG.info("done. processed=%d\n%s", processed, tracker.summary())
     return 0

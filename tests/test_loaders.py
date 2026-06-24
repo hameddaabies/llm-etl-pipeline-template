@@ -86,6 +86,34 @@ def test_jsonl_append_across_sessions(tmp_path: Path) -> None:
     assert ids == {"p1", "p2"}
 
 
+# ── context-manager protocol ──────────────────────────────────────────────────
+
+
+def test_sqlite_context_manager_roundtrip(tmp_path: Path) -> None:
+    """``with`` opens on entry and closes on exit; rows persist."""
+    db = tmp_path / "test.db"
+    with SqliteLoader(db) as loader:
+        loader.upsert(_row(1))
+
+    conn = sqlite3.connect(str(db))
+    result = conn.execute("SELECT id, brand FROM products WHERE id='p1'").fetchone()
+    conn.close()
+    assert result == ("p1", "Acme")
+
+
+def test_jsonl_context_manager_closes_on_error(tmp_path: Path) -> None:
+    """An exception inside the block still closes the file handle."""
+    path = tmp_path / "out.jsonl"
+    loader = JsonlLoader(path)
+    with pytest.raises(ValueError):
+        with loader:
+            loader.upsert(_row(1))
+            raise ValueError("boom")
+
+    assert loader._fh is None  # close() ran despite the error
+    assert json.loads(path.read_text(encoding="utf-8").strip())["id"] == "p1"
+
+
 def test_jsonl_overwrite_mode(tmp_path: Path) -> None:
     """mode='w' truncates on open so only the latest session's rows survive."""
     path = tmp_path / "out.jsonl"
