@@ -18,7 +18,19 @@ from .models import RawProduct
 
 
 def extract_from_fixture(path: str | Path) -> Iterator[RawProduct]:
-    """Yield raw product rows from a JSON fixture file."""
+    """Yield raw product rows from a JSON fixture file.
+
+    The fixture must hold a JSON *array* of product objects. A non-array
+    top-level (e.g. a single object) raises ``ValueError`` up front instead of
+    silently iterating dict keys and failing later with an opaque validation
+    error mid-stream.
+    """
     with Path(path).open("r", encoding="utf-8") as f:
-        for row in json.load(f):
-            yield RawProduct.model_validate(row)
+        rows = json.load(f)
+    if not isinstance(rows, list):
+        raise ValueError(
+            f"fixture {Path(path)} must contain a JSON array of products, "
+            f"got {type(rows).__name__}"
+        )
+    for row in rows:
+        yield RawProduct.model_validate(row)
