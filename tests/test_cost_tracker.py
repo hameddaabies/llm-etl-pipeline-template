@@ -39,6 +39,31 @@ def test_breaching_call_is_still_recorded():
     assert "gpt-4o-mini" in t.summary()
 
 
+def test_record_rejects_negative_tokens():
+    # A negative usage payload must not be allowed to subtract from spend.
+    t = CostTracker(max_usd=1.00)
+    t.record(input_tokens=1_000_000, output_tokens=0, model="gpt-4o-mini")
+    with pytest.raises(ValueError):
+        t.record(input_tokens=-1_000_000, output_tokens=0, model="gpt-4o-mini")
+    # The rejected call left the running total untouched.
+    assert t.calls == 1
+    assert t.spent_usd == pytest.approx(0.15)
+
+
+def test_estimate_rejects_negative_tokens():
+    t = CostTracker(max_usd=1.00)
+    with pytest.raises(ValueError):
+        t.estimate(input_tokens=0, output_tokens=-5, model="gpt-4o-mini")
+
+
+def test_zero_tokens_are_allowed():
+    # Zero is a legitimate count (cached / empty response), not an error.
+    t = CostTracker(max_usd=1.00)
+    delta = t.record(input_tokens=0, output_tokens=0, model="gpt-4o-mini")
+    assert delta == 0.0
+    assert t.calls == 1
+
+
 def test_register_model_price_for_unknown_model():
     t = CostTracker(max_usd=1.00)
     t.register_model_price(

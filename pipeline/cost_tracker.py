@@ -55,6 +55,21 @@ class CostTracker:
         """
         self._custom_prices[model] = (input_usd_per_1m, output_usd_per_1m)
 
+    @staticmethod
+    def _check_tokens(input_tokens: int, output_tokens: int) -> None:
+        """Reject negative token counts before they touch the running total.
+
+        A budget gate must never let a malformed usage payload *subtract* from
+        cumulative spend — negative counts would inflate ``remaining_usd`` and
+        silently defeat the cap. Zero is allowed (e.g. a cached or empty
+        response).
+        """
+        if input_tokens < 0 or output_tokens < 0:
+            raise ValueError(
+                "token counts must be non-negative, got "
+                f"input_tokens={input_tokens}, output_tokens={output_tokens}"
+            )
+
     def _price_for(self, model: str) -> tuple[float, float]:
         """Resolve (input, output) USD-per-1M pricing for a model.
 
@@ -76,13 +91,18 @@ class CostTracker:
         Lets callers pre-flight an expensive request against the remaining
         budget before spending — e.g. ``if tracker.estimate(...) >
         tracker.remaining_usd: skip``. Pricing resolves identically to
-        :meth:`record`.
+        :meth:`record`. Raises ``ValueError`` on negative token counts.
         """
+        self._check_tokens(input_tokens, output_tokens)
         in_price, out_price = self._price_for(model)
         return (input_tokens * in_price + output_tokens * out_price) / 1_000_000
 
     def record(self, *, input_tokens: int, output_tokens: int, model: str) -> float:
-        """Add a call's cost to the running total. Returns the USD delta."""
+        """Add a call's cost to the running total. Returns the USD delta.
+
+        Raises ``ValueError`` on negative token counts.
+        """
+        self._check_tokens(input_tokens, output_tokens)
         in_price, out_price = self._price_for(model)
         delta = (input_tokens * in_price + output_tokens * out_price) / 1_000_000
         self.spent_usd += delta
