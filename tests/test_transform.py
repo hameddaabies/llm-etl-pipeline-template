@@ -68,6 +68,20 @@ def test_price_passthrough_from_raw() -> None:
     assert result.price_usd == pytest.approx(29.99)
 
 
+def test_id_pinned_to_raw_when_llm_alters_it() -> None:
+    """A reformatted id from the LLM must not become the loader's upsert key.
+
+    `id` is the primary key SqliteLoader upserts on. If the model returns
+    "P1" or "p-1" instead of "p1", the row inserts under a key nothing
+    references instead of updating the existing product.
+    """
+    transformer = Transformer(
+        client=_make_client(_enriched(id="P-1")), model="gpt-4o-mini"
+    )
+    result = transformer.enrich_one(_raw(price=None))
+    assert result.id == "p1"
+
+
 # ── cost tracking ─────────────────────────────────────────────────────────────
 
 

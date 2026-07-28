@@ -76,6 +76,12 @@ class Transformer:
         parsed = response.choices[0].message.parsed
         if parsed is None:
             raise RuntimeError(f"LLM returned no parsed object for {raw.id}")
+        # Pin identity to the source row. `id` is the loader's upsert key, so a
+        # model that reformats or truncates it (strips a prefix, drops a leading
+        # zero) would silently write the enriched row under a key nothing else
+        # references — an orphan insert rather than an update. The extractor owns
+        # the id; the LLM only gets a vote on brand/category/tags.
+        parsed.id = raw.id
         # Keep price pass-through — the LLM shouldn't hallucinate a number here.
         parsed.price_usd = raw.price_usd
         return parsed
