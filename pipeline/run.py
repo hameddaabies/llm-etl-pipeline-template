@@ -33,6 +33,7 @@ def main() -> int:
     tracker = CostTracker(max_usd=cfg.max_usd)
     transformer = Transformer(model=cfg.openai_model, cost_tracker=tracker)
     processed = 0
+    failed = 0
     with SqliteLoader(cfg.db_path) as loader:
         for raw in extract_from_fixture(fixture):
             try:
@@ -40,11 +41,19 @@ def main() -> int:
             except BudgetExhausted as e:
                 LOG.warning("budget exhausted: %s — stopping early", e)
                 break
+            except Exception:
+                # One malformed row must not abort the batch. Transient errors
+                # were already retried inside enrich_one, so reaching here means
+                # this row is genuinely bad — record it and move on. Only
+                # BudgetExhausted (handled above) halts the run.
+                LOG.exception("enrichment failed for id=%s — skipping row", raw.id)
+                failed += 1
+                continue
             loader.upsert(enriched)
             processed += 1
             LOG.info("loaded id=%s brand=%s category=%s", enriched.id, enriched.brand, enriched.category)
 
-    LOG.info("done. processed=%d\n%s", processed, tracker.summary())
+    LOG.info("done. processed=%d failed=%d\n%s", processed, failed, tracker.summary())
     return 0
 
 
