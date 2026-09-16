@@ -6,8 +6,6 @@ Pydantic object. Wrapped in a retry loop and gated by CostTracker.
 
 from __future__ import annotations
 
-import os
-
 from openai import OpenAI
 from tenacity import (
     retry,
@@ -32,11 +30,11 @@ class Transformer:
         self,
         *,
         client: OpenAI | None = None,
-        model: str | None = None,
+        model: str,
         cost_tracker: CostTracker | None = None,
     ) -> None:
         self.client = client or OpenAI()
-        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.model = model
         self.cost_tracker = cost_tracker
 
     # Retry transient failures (network, rate limits, malformed parses) but
