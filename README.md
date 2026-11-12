@@ -83,6 +83,8 @@ llm-etl-pipeline-template/
 pytest
 ```
 
+The suite mocks the OpenAI client, so it runs offline with no API key. CI runs it on every push and pull request (`.github/workflows/tests.yml`).
+
 ## Who wrote this
 
 Hamed Daabies — Data Engineer ([Upwork](https://www.upwork.com/freelancers/hameddaabies) · [LinkedIn](https://www.linkedin.com/in/hameddaabies/)).
