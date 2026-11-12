@@ -51,7 +51,10 @@ def main() -> int:
                 continue
             loader.upsert(enriched)
             processed += 1
-            LOG.info("loaded id=%s brand=%s category=%s", enriched.id, enriched.brand, enriched.category)
+            LOG.info(
+                "loaded id=%s brand=%s category=%s",
+                enriched.id, enriched.brand, enriched.category,
+            )
 
     LOG.info("done. processed=%d failed=%d\n%s", processed, failed, tracker.summary())
     return 0

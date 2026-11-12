@@ -20,7 +20,7 @@ from .models import ProductEnriched, RawProduct
 SYSTEM_PROMPT = (
     "You normalize noisy e-commerce product data. "
     "Return a canonical brand name (title-case), classify into one of the "
-    "fixed categories, and add 2–6 concise lowercase tags describing the item. "
+    "fixed categories, and add 2–6 concise lowercase tags describing the item. "  # noqa: RUF001
     "If the brand is truly unknown, use 'Unknown'."
 )
 

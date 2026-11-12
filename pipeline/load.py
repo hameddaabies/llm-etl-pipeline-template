@@ -39,7 +39,7 @@ class _ManagedLoader:
     def open(self) -> None: ...  # pragma: no cover - provided by subclass
     def close(self) -> None: ...  # pragma: no cover - provided by subclass
 
-    def __enter__(self) -> "_ManagedLoader":
+    def __enter__(self) -> _ManagedLoader:
         self.open()
         return self
 

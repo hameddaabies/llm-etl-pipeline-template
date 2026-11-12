@@ -1,0 +1,37 @@
+# Tooling config only. This template runs in place (``python -m pipeline.run``)
+# rather than as an installable distribution, so there is no [project] or
+# [build-system] table here — just the linter settings CI enforces.
+
+[tool.ruff]
+# 100 keeps the existing hand-wrapped docstrings and log calls intact instead
+# of forcing a whole-tree reflow to fit 88.
+line-length = 100
+# The codebase uses PEP 604 (``X | None``) unions, which need 3.10+.
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",  # pycodestyle + pyflakes
+    "I",            # import sorting
+    "UP",           # pyupgrade
+    "B",            # bugbear
+    "C4",           # comprehension rewrites
+    "SIM",          # simplifications
+    "RET",          # return-path cleanups
+    "PIE",          # misc lints
+    "PTH",          # prefer pathlib over os.path
+    "N",            # pep8-naming
+    "T20",          # no stray print()/pprint() in library code
+    "RUF",          # ruff-specific, incl. unused-noqa
+]
+ignore = [
+    # ``BudgetExhausted`` is part of the public API that callers catch;
+    # renaming it to ``...Error`` would break them for a style rule.
+    "N818",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests nest ``with patch(...)`` around ``pytest.raises`` so each layer keeps
+# its own explanatory comment, and build fixtures with keyword ``dict()`` calls
+# that mirror the model constructors they feed.
+"tests/*" = ["SIM117", "C408"]
